@@ -195,7 +195,7 @@ else:
     assistant = st.session_state.assistant
 
 # Sidebar - Navigation
-st.sidebar.markdown("# 🥗 FitLife AI")
+st.sidebar.markdown("# 🥗 FitLife AI Assistant")
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
