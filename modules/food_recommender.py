@@ -22,7 +22,7 @@ class NutritionalTarget:
 
 class FoodRecommendationEngine:
     """
-    Moteur de recommandation ML sans API externe
+    Moteur de recommandation ML 
     Utilise: cosine similarity, feature engineering, scoring personnalisé
     """
     

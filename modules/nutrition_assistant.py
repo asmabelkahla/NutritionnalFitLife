@@ -371,7 +371,7 @@ Essayez: "Analyse les bienfaits du poulet pour mon objectif"
             )
         
         elif intent == 'hydratation':
-            from Module1_nutrition_calculator import NutritionalCalculator
+            from nutrition_calculator import NutritionalCalculator
             water = NutritionalCalculator.calculate_water_needs(
                 profile['weight'],
                 profile['activity_level']
@@ -422,7 +422,7 @@ def test_assistant():
         'Sodium': [74, 59, 7, 33]
     })
     
-    from Module2_food_recommender import FoodRecommendationEngine
+    from food_recommender import FoodRecommendationEngine
     recommender = FoodRecommendationEngine(test_data)
     
     assistant = NutritionAssistant(test_data, recommender)

@@ -1,7 +1,6 @@
 """
-FitLife Nutrition AI - Application Principale Complète
-Version Sans API Externe - Tous Modules Locaux
-Auteurs: Asma Bélkahla & Monia Selleoui
+FitLife Nutrition AI - Application Utilisateur Finale
+Assistant Nutritionnel IA 
 """
 
 import streamlit as st
@@ -53,16 +52,6 @@ st.markdown("""
     .metric-card:hover {
         transform: translateY(-5px);
     }
-    .module-badge {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        color: white;
-        padding: 0.3rem 0.8rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: bold;
-        display: inline-block;
-        margin: 0.2rem;
-    }
     .food-card {
         background: white;
         padding: 1rem;
@@ -96,6 +85,13 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 6px 12px rgba(255,107,53,0.3);
     }
+    .info-box {
+        background: #f8f9fa;
+        border-left: 4px solid #FF6B35;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,15 +114,12 @@ if 'assistant' not in st.session_state:
     st.session_state.assistant = None
 if 'meal_generator' not in st.session_state:
     st.session_state.meal_generator = None
-if 'daily_intake' not in st.session_state:
-    st.session_state.daily_intake = []
 
 # Chargement des données
 @st.cache_data
 def load_food_data():
     """Charge le dataset alimentaire"""
     try:
-        # Essayer de charger vos fichiers réels
         dfs = []
         data_path = "data/nutrition"
         
@@ -141,13 +134,11 @@ def load_food_data():
             combined_df = pd.concat(dfs, ignore_index=True)
             combined_df = combined_df.dropna(subset=['food'])
             combined_df = combined_df.fillna(0)
-            st.success(f"✅ {len(combined_df)} aliments chargés depuis vos fichiers CSV")
             return combined_df
     except Exception as e:
-        st.warning(f"⚠️ Impossible de charger les fichiers CSV: {str(e)}")
+        st.error(f"⚠️ Erreur lors du chargement des données: {str(e)}")
     
-    # Dataset de fallback enrichi
-    st.info("ℹ️ Utilisation du dataset de démonstration (25 aliments)")
+    # Dataset de fallback
     return pd.DataFrame({
         'food': [
             'Poulet grillé', 'Riz complet', 'Brocoli', 'Saumon', 'Œufs',
@@ -179,26 +170,25 @@ def load_food_data():
 # Charger les données
 food_data = load_food_data()
 
-# Initialiser les modules IA
+# Initialiser les modules
 @st.cache_resource
 def initialize_ai_modules(_food_data):
-    """Initialise tous les modules IA"""
+    """Initialise tous les modules"""
     try:
         recommender = FoodRecommendationEngine(_food_data)
         meal_generator = MealPlanGenerator(_food_data, recommender)
         assistant = NutritionAssistant(_food_data, recommender)
-        return recommender, meal_generator, assistant, "✅"
+        return recommender, meal_generator, assistant
     except Exception as e:
-        st.error(f"❌ Erreur initialisation modules: {str(e)}")
-        return None, None, None, "❌"
+        st.error(f"❌ Erreur d'initialisation: {str(e)}")
+        return None, None, None
 
-# Initialiser si nécessaire
+# Initialiser
 if st.session_state.recommender is None:
-    recommender, meal_generator, assistant, status = initialize_ai_modules(food_data)
+    recommender, meal_generator, assistant = initialize_ai_modules(food_data)
     st.session_state.recommender = recommender
     st.session_state.meal_generator = meal_generator
     st.session_state.assistant = assistant
-    st.session_state.modules_status = status
 else:
     recommender = st.session_state.recommender
     meal_generator = st.session_state.meal_generator
@@ -206,7 +196,6 @@ else:
 
 # Sidebar - Navigation
 st.sidebar.markdown("# 🥗 FitLife AI")
-st.sidebar.markdown("**100% Local - Sans API**")
 st.sidebar.markdown("---")
 
 page = st.sidebar.radio(
@@ -217,13 +206,10 @@ page = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🤖 Modules IA")
-st.sidebar.text(f"{st.session_state.modules_status} Tous opérationnels")
-st.sidebar.text(f"📊 {len(food_data)} aliments")
 
 if st.session_state.profile:
     st.sidebar.success("✅ Profil configuré")
-    st.sidebar.info(f"**{st.session_state.profile['goal']}**")
+    st.sidebar.info(f"**Objectif:** {st.session_state.profile['goal']}")
     if st.session_state.nutritional_needs:
         st.sidebar.metric("Calories/jour", 
                          f"{st.session_state.nutritional_needs['target_calories']:.0f}")
@@ -234,101 +220,154 @@ else:
 
 # PAGE: ACCUEIL
 if page == "🏠 Accueil":
-    st.markdown('<h1 class="main-header">🥗 FitLife - IA Nutritionnelle Locale</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🥗 Bienvenue sur FitLife</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; font-size: 1.2rem; color: #666; margin-bottom: 2rem;">Votre assistant nutritionnel intelligent pour atteindre vos objectifs</p>', unsafe_allow_html=True)
     
+    # Fonctionnalités principales
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown("""
         <div class="metric-card">
-            <h2>🤖</h2>
-            <h3>4 Modules IA</h3>
-            <p>Développés localement<br>Sans dépendance externe</p>
+            <h2>📊</h2>
+            <h3>Analyse Personnalisée</h3>
+            <p>Calculez vos besoins nutritionnels adaptés à votre profil</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("""
         <div class="metric-card">
-            <h2>🔬</h2>
-            <h3>Testable</h3>
-            <p>Chaque module validable<br>Tests unitaires intégrés</p>
+            <h2>🎯</h2>
+            <h3>Recommandations</h3>
+            <p>Découvrez les aliments parfaits pour votre objectif</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
-        st.markdown(f"""
+        st.markdown("""
         <div class="metric-card">
-            <h2>📊</h2>
-            <h3>Base Complète</h3>
-            <p>{len(food_data)} aliments<br>Données détaillées</p>
+            <h2>📈</h2>
+            <h3>Suivi Progrès</h3>
+            <p>Suivez votre évolution et restez motivé(e)</p>
         </div>
         """, unsafe_allow_html=True)
     
     st.markdown("---")
     
-    # Afficher les modules avec badges
-    st.markdown("### 🚀 Architecture Modulaire")
+    # Guide d'utilisation
+    st.markdown("### 📖 Comment utiliser FitLife")
+    
+    st.markdown("""
+    <div class="info-box">
+        <h4>🚀 Premiers Pas</h4>
+        <ol style="margin: 0.5rem 0;">
+            <li><strong>Configurez votre profil</strong> - Rendez-vous dans l'onglet <strong>👤 Profil</strong> pour renseigner vos informations personnelles (poids, taille, âge, objectif...)</li>
+            <li><strong>Consultez votre dashboard</strong> - Visualisez vos besoins nutritionnels quotidiens calculés automatiquement</li>
+            <li><strong>Découvrez les recommandations</strong> - Obtenez une liste d'aliments adaptés à vos besoins</li>
+            <li><strong>Générez votre plan alimentaire</strong> - Créez un plan de repas personnalisé pour la semaine</li>
+            <li><strong>Posez vos questions</strong> - Utilisez l'assistant pour obtenir des conseils nutritionnels</li>
+            <li><strong>Suivez votre progression</strong> - Enregistrez votre poids régulièrement et visualisez votre évolution</li>
+        </ol>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Objectifs disponibles
+    st.markdown("### 🎯 Objectifs Disponibles")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        #### 🔥 Perte de poids
+        - Déficit calorique calculé
+        - Aliments faibles en calories
+        - Riches en protéines et fibres
+        - Maintien de la masse musculaire
+        """)
+    
+    with col2:
+        st.markdown("""
+        #### 🎯 Maintien
+        - Équilibre nutritionnel
+        - Maintien du poids actuel
+        - Alimentation variée
+        - Bien-être général
+        """)
+    
+    with col3:
+        st.markdown("""
+        #### 💪 Prise de masse
+        - Surplus calorique optimal
+        - Aliments riches en protéines
+        - Développement musculaire
+        - Nutrition sportive
+        """)
+    
+    st.markdown("---")
+    
+    # Avantages
+    st.markdown("### ✨ Pourquoi choisir FitLife ?")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<span class="module-badge">Module 1: Calculateur</span>', unsafe_allow_html=True)
         st.markdown("""
-        - ✅ Formules scientifiques validées (Mifflin-St Jeor)
-        - ✅ BMR, TDEE, Macronutriments
-        - ✅ Estimation durée objectifs
-        - ✅ Calcul besoins hydriques
-        """)
+        ✅ **Personnalisation complète**  
+        Tous les conseils sont adaptés à votre profil unique
         
-        st.markdown('<span class="module-badge">Module 2: Recommandeur ML</span>', unsafe_allow_html=True)
-        st.markdown("""
-        - ✅ Similarité cosine (sklearn)
-        - ✅ Feature engineering nutritionnel
-        - ✅ Scoring personnalisé par objectif
-        - ✅ Recherche d'alternatives
+        ✅ **Base de données complète**  
+        Des milliers d'aliments avec informations nutritionnelles détaillées
+        
+        ✅ **Plans alimentaires intelligents**  
+        Génération automatique de menus équilibrés et variés
         """)
     
     with col2:
-        st.markdown('<span class="module-badge">Module 3: Planificateur</span>', unsafe_allow_html=True)
         st.markdown("""
-        - ✅ Génération de plans hebdomadaires
-        - ✅ Algorithmes d'optimisation
-        - ✅ Variété intelligente
-        - ✅ Respect contraintes caloriques
-        """)
+        ✅ **Assistant nutritionnel**  
+        Réponses instantanées à vos questions
         
-        st.markdown('<span class="module-badge">Module 4: Assistant</span>', unsafe_allow_html=True)
-        st.markdown("""
-        - ✅ NLP basé sur règles (regex)
-        - ✅ Base de connaissances nutritionnelles
-        - ✅ Réponses contextuelles
-        - ✅ Templates personnalisés
+        ✅ **Suivi de progression**  
+        Graphiques et statistiques pour visualiser vos résultats
+        
+        ✅ **Facile à utiliser**  
+        Interface intuitive et conviviale
         """)
     
-    st.markdown("---")
-    st.markdown("### 📖 Comment utiliser l'application")
-    
-    st.markdown("""
-    1. **👤 Configurez votre profil** - Renseignez vos données personnelles
-    2. **📊 Consultez votre dashboard** - Visualisez vos besoins nutritionnels
-    3. **🎯 Obtenez des recommandations** - Découvrez les aliments adaptés
-    4. **🍽️ Générez un plan** - Créez un plan alimentaire personnalisé
-    5. **💬 Utilisez l'assistant** - Posez vos questions nutritionnelles
-    6. **📈 Suivez vos progrès** - Enregistrez votre évolution
-    """)
-    
+    # Call to action
     if not st.session_state.profile:
-        st.warning("👉 Commencez par configurer votre profil dans l'onglet **👤 Profil**")
-        if st.button("🚀 Démarrer maintenant", use_container_width=True):
-            st.rerun()
+        st.markdown("---")
+        st.markdown("### 🚀 Prêt(e) à commencer ?")
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("📝 Créer mon profil maintenant", use_container_width=True, type="primary"):
+                st.rerun()
+    else:
+        st.markdown("---")
+        st.success(f"""
+        ✅ **Profil configuré avec succès!**
+        
+        Votre objectif: **{st.session_state.profile['goal']}**  
+        Calories quotidiennes: **{st.session_state.nutritional_needs['target_calories']:.0f} kcal**
+        
+        👉 Explorez maintenant les autres fonctionnalités!
+        """)
 
 # PAGE: PROFIL
 elif page == "👤 Profil":
     st.markdown('<h1 class="main-header">👤 Configuration du Profil</h1>', unsafe_allow_html=True)
-    st.info("**Module utilisé:** 📊 Calculateur Nutritionnel (Local)")
+    
+    st.markdown("""
+    <div class="info-box">
+        📝 <strong>Renseignez vos informations personnelles</strong> pour obtenir des recommandations nutritionnelles adaptées à vos besoins et objectifs.
+    </div>
+    """, unsafe_allow_html=True)
     
     with st.form("profile_form"):
+        st.markdown("### 📏 Informations Physiques")
         col1, col2 = st.columns(2)
         
         with col1:
@@ -341,12 +380,15 @@ elif page == "👤 Profil":
             target_weight = st.number_input("Poids cible (kg)", 30.0, 200.0, 65.0, 0.1)
             goal = st.selectbox("Objectif", ["Perte de poids", "Maintien", "Prise de masse"])
         
+        st.markdown("### 🏃 Activité Physique")
         activity_level = st.select_slider(
-            "Niveau d'activité",
+            "Niveau d'activité quotidienne",
             options=['Sédentaire', 'Légèrement actif', 'Modérément actif', 'Très actif', 'Extrêmement actif'],
-            value='Modérément actif'
+            value='Modérément actif',
+            help="Sédentaire: Peu ou pas d'exercice | Légèrement actif: Exercice 1-3 jours/semaine | Modérément actif: 3-5 jours/semaine | Très actif: 6-7 jours/semaine | Extrêmement actif: Sport intense quotidien"
         )
         
+        st.markdown("### 🍽️ Préférences Alimentaires")
         col1, col2 = st.columns(2)
         with col1:
             diet_type = st.multiselect(
@@ -355,10 +397,13 @@ elif page == "👤 Profil":
                 default=["Omnivore"]
             )
         with col2:
-            allergies = st.text_area("Allergies/Intolérances", 
-                                     placeholder="Ex: Arachides, fruits de mer...")
+            allergies = st.text_area("Allergies ou intolérances alimentaires", 
+                                     placeholder="Ex: Arachides, fruits de mer, lactose...")
         
-        if st.form_submit_button("💾 Calculer et Enregistrer", use_container_width=True):
+        st.markdown("---")
+        submitted = st.form_submit_button("💾 Enregistrer mon profil", use_container_width=True, type="primary")
+        
+        if submitted:
             # Créer profil utilisateur
             profile_data = UserProfile(
                 weight=weight,
@@ -393,68 +438,68 @@ elif page == "👤 Profil":
             if assistant:
                 assistant.set_context(st.session_state.profile, needs)
             
-            st.success("✅ Profil enregistré et calculs effectués!")
+            st.success("✅ Profil enregistré avec succès!")
             st.balloons()
             
             # Afficher les résultats
             st.markdown("---")
-            st.markdown("### 📊 Vos Besoins Nutritionnels Calculés")
+            st.markdown("### 📊 Vos Besoins Nutritionnels")
             
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                st.metric("🔥 BMR", f"{needs['bmr']:.0f} kcal", 
-                         help="Métabolisme de base - Calories brûlées au repos")
+                st.metric("🔥 Métabolisme de base", f"{needs['bmr']:.0f} kcal", 
+                         help="Calories brûlées au repos")
             with col2:
-                st.metric("⚡ TDEE", f"{needs['tdee']:.0f} kcal", 
-                         help="Dépense énergétique totale quotidienne")
+                st.metric("⚡ Dépense quotidienne", f"{needs['tdee']:.0f} kcal", 
+                         help="Calories totales brûlées par jour")
             with col3:
-                st.metric("🎯 Calories cible", f"{needs['target_calories']:.0f} kcal", 
+                st.metric("🎯 Calories recommandées", f"{needs['target_calories']:.0f} kcal", 
                          delta=f"{needs['deficit_surplus']:+.0f} kcal")
             with col4:
                 if needs['duration_weeks'] > 0:
-                    st.metric("⏱️ Durée estimée", f"{needs['duration_weeks']:.0f} sem",
+                    st.metric("⏱️ Durée estimée", f"{needs['duration_weeks']:.0f} semaines",
                              help=needs['duration_message'])
                 else:
-                    st.metric("⏱️ Durée estimée", "Maintien")
+                    st.metric("⏱️ Objectif", "Maintien")
             
-            st.markdown("### 🥗 Macronutriments Journaliers")
+            st.markdown("### 🥗 Répartition Quotidienne des Macronutriments")
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("🥩 Protéines", f"{needs['macros']['proteins']:.0f}g",
-                         help=f"{needs['macros']['proteins_pct']:.1f}% des calories")
+                         help=f"{needs['macros']['proteins_pct']:.1f}% de vos calories")
             with col2:
                 st.metric("🌾 Glucides", f"{needs['macros']['carbs']:.0f}g",
-                         help=f"{needs['macros']['carbs_pct']:.1f}% des calories")
+                         help=f"{needs['macros']['carbs_pct']:.1f}% de vos calories")
             with col3:
                 st.metric("🥑 Lipides", f"{needs['macros']['fats']:.0f}g",
-                         help=f"{needs['macros']['fats_pct']:.1f}% des calories")
+                         help=f"{needs['macros']['fats_pct']:.1f}% de vos calories")
             
             st.markdown("### 💧 Hydratation")
-            st.metric("💧 Eau recommandée", f"{needs['water_liters']} litres/jour")
+            st.metric("💧 Eau recommandée par jour", f"{needs['water_liters']} litres")
             
             st.info(f"""
-            📝 **Résumé de votre profil:**
-            - Objectif: {goal}
-            - Du poids actuel ({weight}kg) au poids cible ({target_weight}kg)
-            - Activité: {activity_level}
-            - Régime: {', '.join(diet_type)}
+            ✅ **Récapitulatif de votre profil:**
+            - **Objectif:** {goal}
+            - **Évolution souhaitée:** de {weight}kg à {target_weight}kg
+            - **Niveau d'activité:** {activity_level}
+            - **Régime alimentaire:** {', '.join(diet_type)}
             """)
 
 # PAGE: DASHBOARD
 elif page == "📊 Dashboard":
-    st.markdown('<h1 class="main-header">📊 Tableau de Bord Nutritionnel</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">📊 Tableau de Bord</h1>', unsafe_allow_html=True)
     
     if not st.session_state.profile:
-        st.warning("⚠️ Configurez votre profil d'abord dans l'onglet **👤 Profil**")
+        st.warning("⚠️ Veuillez d'abord configurer votre profil dans l'onglet **👤 Profil**")
     else:
         profile = st.session_state.profile
         needs = st.session_state.nutritional_needs
         
         # Métriques principales
-        st.markdown("### 📊 Vos Objectifs Nutritionnels")
+        st.markdown("### 📊 Vos Objectifs Nutritionnels Quotidiens")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("🔥 Calories/jour", f"{needs['target_calories']:.0f} kcal")
+            st.metric("🔥 Calories", f"{needs['target_calories']:.0f} kcal")
         with col2:
             st.metric("🥩 Protéines", f"{needs['macros']['proteins']:.0f}g")
         with col3:
@@ -520,7 +565,7 @@ elif page == "📊 Dashboard":
         
         # Recommandations du jour
         st.markdown("---")
-        st.markdown("### 🎯 Recommandations Personnalisées du Jour")
+        st.markdown("### 🎯 Aliments Recommandés pour Vous")
         
         if recommender:
             target = NutritionalTarget(
@@ -539,7 +584,7 @@ elif page == "📊 Dashboard":
                     st.markdown(f"""
                     <div class="food-card">
                         <h4>🍽️ {food['food']}</h4>
-                        <span class="recommendation-badge">Match: {food['match_percentage']:.0f}%</span>
+                        <span class="recommendation-badge">Compatibilité: {food['match_percentage']:.0f}%</span>
                         <p><strong>Pour 100g:</strong></p>
                         <ul style="font-size: 0.9rem;">
                             <li>🔥 {food['Caloric Value']:.0f} kcal</li>
@@ -557,42 +602,46 @@ elif page == "📊 Dashboard":
 
 # PAGE: RECOMMANDATIONS
 elif page == "🎯 Recommandations":
-    st.markdown('<h1 class="main-header">🎯 Recommandations Intelligentes</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🎯 Recommandations Personnalisées</h1>', unsafe_allow_html=True)
     
     if not st.session_state.profile:
         st.warning("⚠️ Configurez votre profil pour des recommandations personnalisées")
     else:
-        st.info("**Module utilisé:** 🎯 Moteur de Recommandation ML (Scikit-learn)")
-        
         profile = st.session_state.profile
         needs = st.session_state.nutritional_needs
         
-        st.markdown("### 🔍 Recherche Intelligente d'Aliments")
+        st.markdown("""
+        <div class="info-box">
+            💡 Découvrez les aliments les plus adaptés à votre objectif et vos besoins nutritionnels
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown("### 🔍 Recherche d'Aliments")
         
         col1, col2, col3 = st.columns([2, 1, 1])
         with col1:
             search = st.text_input("🔎 Rechercher un aliment", "")
         with col2:
-            n_results = st.number_input("Nombre", 5, 20, 10)
+            n_results = st.number_input("Nombre de résultats", 5, 20, 10)
         with col3:
-            sort_by = st.selectbox("Trier par", ["Match", "Protéines", "Calories"])
+            sort_by = st.selectbox("Trier par", ["Compatibilité", "Protéines", "Calories"])
         
         # Filtres avancés
         with st.expander("🔧 Filtres avancés"):
             col1, col2 = st.columns(2)
             with col1:
-                min_protein = st.slider("Protéines min (g/100g)", 0, 50, 0)
-                max_calories = st.slider("Calories max (kcal/100g)", 0, 1000, 1000)
+                min_protein = st.slider("Protéines minimum (g/100g)", 0, 50, 0)
+                max_calories = st.slider("Calories maximum (kcal/100g)", 0, 1000, 1000)
             with col2:
                 exclude_foods = st.multiselect(
                     "Exclure des aliments",
                     st.session_state.favorite_foods if st.session_state.favorite_foods else ["Aucun"]
                 )
         
-        if st.button("🎯 Générer des recommandations", use_container_width=True):
-            with st.spinner("🤖 Analyse en cours avec le moteur ML..."):
-                # Calculer les besoins pour un repas type
-                meal_ratio = 0.30  # 30% des besoins quotidiens
+        if st.button("🎯 Voir les recommandations", use_container_width=True, type="primary"):
+            with st.spinner("🔍 Recherche des meilleurs aliments pour vous..."):
+                # Calculer les besoins pour un repas
+                meal_ratio = 0.30
                 
                 target = NutritionalTarget(
                     calories=needs['target_calories'] * meal_ratio,
@@ -617,15 +666,15 @@ elif page == "🎯 Recommandations":
                         recommendations['food'].str.contains(search, case=False, na=False)
                     ]
                 
-                st.success(f"✅ {len(recommendations)} aliments recommandés pour votre {profile['goal']}")
+                st.success(f"✅ {len(recommendations)} aliments recommandés pour votre objectif: **{profile['goal']}**")
                 
                 # Afficher résultats
                 for idx, (_, food) in enumerate(recommendations.iterrows()):
-                    with st.expander(f"#{idx+1} - {food['food']} (Match: {food['match_percentage']:.0f}%)", expanded=(idx < 3)):
+                    with st.expander(f"#{idx+1} - {food['food']} (Compatibilité: {food['match_percentage']:.0f}%)", expanded=(idx < 3)):
                         col1, col2, col3 = st.columns(3)
                         
                         with col1:
-                            st.markdown("**📊 Macros /100g:**")
+                            st.markdown("**📊 Valeurs nutritionnelles /100g:**")
                             st.text(f"🔥 Calories: {food['Caloric Value']:.0f} kcal")
                             st.text(f"🥩 Protéines: {food['Protein']:.1f}g")
                             st.text(f"🌾 Glucides: {food['Carbohydrates']:.1f}g")
@@ -633,7 +682,7 @@ elif page == "🎯 Recommandations":
                             st.text(f"🌿 Fibres: {food['Dietary Fiber']:.1f}g")
                         
                         with col2:
-                            st.markdown("**🔬 Portion suggérée:**")
+                            st.markdown("**🍽️ Portion suggérée:**")
                             if food['Caloric Value'] > 0:
                                 suggested_portion = min(200, target.calories * 0.4 / food['Caloric Value'] * 100)
                             else:
@@ -645,7 +694,7 @@ elif page == "🎯 Recommandations":
                             st.text(f"🔥 {portion_cal:.0f} kcal")
                             st.text(f"🥩 {portion_prot:.1f}g protéines")
                             
-                            # Indicateurs nutritionnels
+                            # Indicateurs
                             if food['Protein'] > 15:
                                 st.success("💪 Riche en protéines")
                             if food['Dietary Fiber'] > 5:
@@ -662,20 +711,20 @@ elif page == "🎯 Recommandations":
                             st.markdown("**🎯 Pour votre objectif:**")
                             if profile['goal'] == 'Perte de poids':
                                 if food['Caloric Value'] < 150 and food['Protein'] > 10:
-                                    st.success("✅ EXCELLENT")
+                                    st.success("✅ EXCELLENT CHOIX")
                                 elif food['Caloric Value'] < 300:
-                                    st.warning("⚠️ MODÉRÉ")
+                                    st.warning("⚠️ BON AVEC MODÉRATION")
                                 else:
-                                    st.error("❌ LIMITER")
+                                    st.error("❌ À LIMITER")
                             elif profile['goal'] == 'Prise de masse':
                                 if food['Caloric Value'] > 200 and food['Protein'] > 15:
-                                    st.success("✅ EXCELLENT")
+                                    st.success("✅ EXCELLENT CHOIX")
                                 else:
-                                    st.info("ℹ️ BON")
+                                    st.info("ℹ️ BON ALIMENT")
                             else:
                                 st.success("✅ COMPATIBLE")
                         
-                        # Boutons d'action
+                        # Actions
                         col_a, col_b = st.columns(2)
                         with col_a:
                             if st.button(f"⭐ Ajouter aux favoris", key=f"fav_rec_{idx}"):
@@ -683,7 +732,7 @@ elif page == "🎯 Recommandations":
                                     st.session_state.favorite_foods.append(food['food'])
                                     st.success(f"✅ {food['food']} ajouté!")
                         with col_b:
-                            if st.button(f"🔄 Alternatives", key=f"alt_rec_{idx}"):
+                            if st.button(f"🔄 Voir alternatives", key=f"alt_rec_{idx}"):
                                 alternatives = recommender.find_alternatives(food['food'], n_alternatives=3)
                                 if not alternatives.empty:
                                     st.write("**Alternatives similaires:**")
@@ -704,45 +753,44 @@ elif page == "🎯 Recommandations":
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    if st.button("🗑️", key=f"remove_fav_{idx}"):
+                    if st.button("🗑️ Retirer", key=f"remove_fav_{idx}"):
                         st.session_state.favorite_foods.remove(food_name)
                         st.rerun()
 
 # PAGE: PLAN ALIMENTAIRE
 elif page == "🍽️ Plan Alimentaire":
-    st.markdown('<h1 class="main-header">🍽️ Générateur de Plan Alimentaire</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🍽️ Votre Plan Alimentaire Personnalisé</h1>', unsafe_allow_html=True)
     
     if not st.session_state.profile:
         st.warning("⚠️ Configurez votre profil d'abord")
     else:
-        st.info("**Module utilisé:** 🍽️ Planificateur (Algorithmes d'optimisation locaux)")
-        
         st.markdown("""
-        ### 🤖 Génération Intelligente de Plan
-        
-        Le planificateur utilise:
-        - 🎯 Vos besoins nutritionnels calculés
-        - 🧠 Le moteur de recommandation ML
-        - 📊 Des templates de repas équilibrés
-        - 🔄 Un système de variété intelligente
-        """)
+        <div class="info-box">
+            📅 Générez un plan alimentaire hebdomadaire adapté à vos besoins et préférences
+        </div>
+        """, unsafe_allow_html=True)
         
         with st.form("meal_plan_form"):
+            st.markdown("### ⚙️ Personnalisez votre plan")
+            
             col1, col2 = st.columns(2)
             
             with col1:
-                meals_per_day = st.slider("Nombre de repas par jour", 3, 6, 4)
-                variety_days = st.slider("Jours de variété", 1, 7, 7)
+                meals_per_day = st.slider("Nombre de repas par jour", 3, 6, 4,
+                                         help="3 repas = Petit-déj, Déjeuner, Dîner | 4+ = Ajout de collations")
+                variety_days = st.slider("Variété des repas (jours)", 1, 7, 7,
+                                        help="Nombre de jours avant de répéter les mêmes repas")
             
             with col2:
-                budget = st.selectbox("Budget", ["Économique", "Moyen", "Élevé"])
+                budget = st.selectbox("Budget alimentaire", ["Économique", "Moyen", "Élevé"])
                 prep_time = st.selectbox("Temps de préparation", 
                                         ["Rapide (<30min)", "Moyen (30-60min)", "Élaboré (>60min)"])
             
-            generate = st.form_submit_button("🎨 Générer le Plan", use_container_width=True)
+            st.markdown("---")
+            generate = st.form_submit_button("🎨 Générer mon plan alimentaire", use_container_width=True, type="primary")
             
             if generate and meal_generator:
-                with st.spinner("🤖 Génération de votre plan personnalisé..."):
+                with st.spinner("🍳 Création de votre plan personnalisé..."):
                     # Préparer les préférences
                     preferences = MealPlanPreferences(
                         meals_per_day=meals_per_day,
@@ -759,35 +807,35 @@ elif page == "🍽️ Plan Alimentaire":
                         preferences
                     )
                     
-                    # Formater pour l'affichage
+                    # Formater
                     formatted_plan = meal_generator.format_plan_for_display(week_plan)
                     st.session_state.meal_plan = formatted_plan
                     
-                    # Calculer les stats
+                    # Stats
                     stats = meal_generator.calculate_plan_stats(week_plan)
                     
-                    st.success("✅ Plan alimentaire généré avec succès!")
+                    st.success("✅ Votre plan alimentaire est prêt!")
                     st.balloons()
                     
-                    # Afficher les stats
+                    # Statistiques
                     col1, col2, col3, col4 = st.columns(4)
                     with col1:
                         st.metric("Calories moy/jour", f"{stats['avg_daily_calories']:.0f}")
                     with col2:
                         st.metric("Protéines moy/jour", f"{stats['avg_daily_proteins']:.0f}g")
                     with col3:
-                        st.metric("Aliments uniques", stats['unique_foods_count'])
+                        st.metric("Aliments différents", stats['unique_foods_count'])
                     with col4:
-                        st.metric("Variété", f"{stats['variety_score']:.0f}%")
+                        st.metric("Score de variété", f"{stats['variety_score']:.0f}%")
         
         # Affichage du plan
         if st.session_state.meal_plan:
             st.markdown("---")
-            st.markdown("### 📅 Votre Plan Alimentaire Personnalisé")
+            st.markdown("### 📅 Votre Plan de la Semaine")
             
             # Sélecteur de jour
             days = list(st.session_state.meal_plan.keys())
-            selected_day = st.selectbox("📆 Sélectionnez un jour", days)
+            selected_day = st.selectbox("📆 Choisissez un jour", days)
             
             if selected_day in st.session_state.meal_plan:
                 day_meals = st.session_state.meal_plan[selected_day]
@@ -798,7 +846,7 @@ elif page == "🍽️ Plan Alimentaire":
                 total_carbs = sum([meal.get('glucides', 0) for meal in day_meals.values()])
                 total_fats = sum([meal.get('lipides', 0) for meal in day_meals.values()])
                 
-                st.markdown(f"### 📊 Totaux pour {selected_day}")
+                st.markdown(f"### 📊 Bilan nutritionnel - {selected_day}")
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     st.metric("Total Calories", f"{total_cal:.0f} kcal")
@@ -809,61 +857,63 @@ elif page == "🍽️ Plan Alimentaire":
                 with col4:
                     st.metric("Total Lipides", f"{total_fats:.0f}g")
                 
-                # Comparaison avec objectifs
+                # Comparaison
                 target = st.session_state.nutritional_needs['target_calories']
                 diff = total_cal - target
                 if abs(diff) < 100:
-                    st.success(f"✅ Objectif atteint! ({diff:+.0f} kcal de différence)")
+                    st.success(f"✅ Parfait! Vous êtes à {diff:+.0f} kcal de votre objectif")
                 elif abs(diff) < 200:
-                    st.warning(f"⚠️ Proche de l'objectif ({diff:+.0f} kcal)")
+                    st.warning(f"⚠️ Proche de l'objectif ({diff:+.0f} kcal de différence)")
                 else:
-                    st.error(f"❌ Écart important ({diff:+.0f} kcal)")
+                    st.error(f"❌ Écart important: {diff:+.0f} kcal")
                 
                 st.markdown("---")
                 
-                # Afficher les repas
+                # Repas du jour
                 for meal_name, meal_data in day_meals.items():
                     with st.expander(f"🍽️ {meal_name}", expanded=True):
                         col1, col2 = st.columns([2, 1])
                         
                         with col1:
-                            st.markdown("**🥘 Aliments:**")
+                            st.markdown("**🥘 Composition du repas:**")
                             for aliment in meal_data.get('aliments', []):
                                 st.markdown(f"• {aliment}")
                         
                         with col2:
                             st.markdown("**📊 Valeurs nutritionnelles:**")
-                            st.markdown(f"- 🔥 {meal_data.get('calories', 0)} kcal")
-                            st.markdown(f"- 🥩 {meal_data.get('proteines', 0)}g protéines")
-                            st.markdown(f"- 🌾 {meal_data.get('glucides', 0)}g glucides")
-                            st.markdown(f"- 🥑 {meal_data.get('lipides', 0)}g lipides")
+                            st.markdown(f"- 🔥 {meal_data.get('calories', 0):.0f} kcal")
+                            st.markdown(f"- 🥩 {meal_data.get('proteines', 0):.0f}g protéines")
+                            st.markdown(f"- 🌾 {meal_data.get('glucides', 0):.0f}g glucides")
+                            st.markdown(f"- 🥑 {meal_data.get('lipides', 0):.0f}g lipides")
             
-            # Actions sur le plan
+            # Actions
             st.markdown("---")
             col1, col2, col3 = st.columns(3)
             with col1:
-                if st.button("🔄 Régénérer le plan", use_container_width=True):
+                if st.button("🔄 Générer un nouveau plan", use_container_width=True):
                     st.session_state.meal_plan = None
                     st.rerun()
             with col2:
                 if st.button("📥 Exporter en PDF", use_container_width=True):
-                    st.info("🚧 Fonctionnalité d'export PDF en développement")
+                    st.info("🚧 Fonctionnalité d'export bientôt disponible")
             with col3:
                 if st.button("💾 Sauvegarder", use_container_width=True):
-                    st.success("✅ Plan sauvegardé dans votre profil!")
+                    st.success("✅ Plan sauvegardé!")
 
 # PAGE: ASSISTANT
 elif page == "💬 Assistant":
-    st.markdown('<h1 class="main-header">💬 Assistant Nutritionnel IA</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">💬 Assistant Nutritionnel</h1>', unsafe_allow_html=True)
     
-    st.info("**Module utilisé:** 💬 Assistant (NLP basé sur règles + Base de connaissances)")
+    st.markdown("""
+    <div class="info-box">
+        💡 Posez toutes vos questions sur la nutrition, les aliments, et recevez des conseils personnalisés
+    </div>
+    """, unsafe_allow_html=True)
     
     if not st.session_state.profile:
         st.warning("⚠️ Configurez votre profil pour des réponses personnalisées")
     
-    st.markdown("""
-    ### 💡 Questions Suggérées (Cliquez pour poser la question)
-    """)
+    st.markdown("### 💡 Questions Fréquentes (Cliquez pour poser)")
     
     # Quick actions
     col1, col2, col3 = st.columns(3)
@@ -871,35 +921,41 @@ elif page == "💬 Assistant":
         if st.button("🍳 Petit-déjeuner protéiné", use_container_width=True):
             question = "Suggère-moi un petit-déjeuner protéiné adapté à mon objectif"
             st.session_state.chat_history.append({"role": "user", "content": question})
+            st.rerun()
     with col2:
         if st.button("🏋️ Post-entraînement", use_container_width=True):
             question = "Que dois-je manger après mon entraînement?"
             st.session_state.chat_history.append({"role": "user", "content": question})
+            st.rerun()
     with col3:
         if st.button("💧 Hydratation", use_container_width=True):
             question = "Combien d'eau dois-je boire par jour?"
             st.session_state.chat_history.append({"role": "user", "content": question})
+            st.rerun()
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("🐟 Analyser le saumon", use_container_width=True):
-            question = "Analyse les bienfaits du saumon pour mon objectif"
+        if st.button("🐟 Bienfaits du saumon", use_container_width=True):
+            question = "Quels sont les bienfaits du saumon pour moi?"
             st.session_state.chat_history.append({"role": "user", "content": question})
+            st.rerun()
     with col2:
         if st.button("🔄 Alternatives poulet", use_container_width=True):
             question = "Quelles sont les alternatives au poulet?"
             st.session_state.chat_history.append({"role": "user", "content": question})
+            st.rerun()
     with col3:
         if st.button("⏰ Timing des repas", use_container_width=True):
-            question = "Quand dois-je manger mes repas?"
+            question = "À quelle heure dois-je prendre mes repas?"
             st.session_state.chat_history.append({"role": "user", "content": question})
+            st.rerun()
     
     st.markdown("---")
     
     # Historique du chat
     chat_container = st.container()
     with chat_container:
-        for msg in st.session_state.chat_history[-10:]:  # Afficher les 10 derniers messages
+        for msg in st.session_state.chat_history[-10:]:
             if msg["role"] == "user":
                 st.markdown(f"""
                 <div style='background: linear-gradient(135deg, #E3F2FD 0%, #BBDEFB 100%); 
@@ -921,75 +977,81 @@ elif page == "💬 Assistant":
     st.markdown("---")
     col1, col2 = st.columns([5, 1])
     with col1:
-        user_input = st.text_input("💬 Posez votre question nutritionnelle...", 
+        user_input = st.text_input("💬 Votre question...", 
                                    key="chat_input", 
                                    label_visibility="collapsed",
-                                   placeholder="Ex: Suggère-moi un repas, Analyse un aliment...")
+                                   placeholder="Ex: Suggère-moi un repas, Quels aliments pour mon objectif?")
     with col2:
         send = st.button("📤 Envoyer", use_container_width=True)
     
     if send and user_input:
         st.session_state.chat_history.append({"role": "user", "content": user_input})
         
-        with st.spinner("🤖 L'assistant réfléchit..."):
+        with st.spinner("🤖 Réflexion en cours..."):
             if assistant and st.session_state.profile:
                 response = assistant.answer_query(user_input)
             else:
                 response = """
-⚠️ **Profil non configuré**
+⚠️ **Configuration nécessaire**
 
-Pour des recommandations personnalisées, veuillez:
-1. Aller dans l'onglet **👤 Profil**
-2. Renseigner vos informations
+Pour recevoir des conseils personnalisés, veuillez:
+1. Configurer votre profil dans l'onglet **👤 Profil**
+2. Renseigner vos informations personnelles
 3. Enregistrer votre profil
 
-Je pourrai alors vous fournir des conseils adaptés à votre objectif! 💪
+Je pourrai ensuite vous fournir des recommandations adaptées à votre objectif! 💪
 """
             
             st.session_state.chat_history.append({"role": "assistant", "content": response})
         
         st.rerun()
     
-    # Bouton pour effacer l'historique
+    # Effacer historique
     if st.session_state.chat_history:
         st.markdown("---")
-        if st.button("🗑️ Effacer l'historique de conversation", use_container_width=True):
+        if st.button("🗑️ Effacer l'historique", use_container_width=True):
             st.session_state.chat_history = []
             st.rerun()
 
 # PAGE: SUIVI
 elif page == "📈 Suivi":
-    st.markdown('<h1 class="main-header">📈 Suivi de Progression</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">📈 Suivi de Votre Progression</h1>', unsafe_allow_html=True)
     
     if not st.session_state.profile:
         st.warning("⚠️ Configurez votre profil d'abord")
     else:
+        st.markdown("""
+        <div class="info-box">
+            📊 Suivez votre évolution en enregistrant régulièrement votre poids et visualisez vos progrès
+        </div>
+        """, unsafe_allow_html=True)
+        
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.markdown("### 📝 Enregistrer un nouveau poids")
+            st.markdown("### 📝 Nouvel Enregistrement")
             with st.form("weight_form"):
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    weight_date = st.date_input("Date", datetime.now())
+                    weight_date = st.date_input("Date de la mesure", datetime.now())
                     weight_val = st.number_input("Poids (kg)", 30.0, 200.0, 
                                                  st.session_state.profile['weight'], 0.1)
                 with col_b:
-                    notes = st.text_area("Notes/Ressenti", 
+                    notes = st.text_area("Notes (optionnel)", 
                                         placeholder="Comment vous sentez-vous? Observations...")
                 
-                if st.form_submit_button("💾 Enregistrer", use_container_width=True):
+                if st.form_submit_button("💾 Enregistrer", use_container_width=True, type="primary"):
                     st.session_state.weight_history.append({
                         'date': weight_date,
                         'weight': weight_val,
                         'notes': notes
                     })
-                    st.success(f"✅ {weight_val} kg enregistré pour le {weight_date}")
+                    st.success(f"✅ Poids de {weight_val} kg enregistré pour le {weight_date}")
                     st.balloons()
         
         with col2:
             if st.session_state.weight_history:
-                st.markdown("### 📊 Statistiques")
+                st.markdown("### 📊 Vos Statistiques")
                 latest = st.session_state.weight_history[-1]['weight']
                 initial = st.session_state.profile['weight']
                 target = st.session_state.profile['target_weight']
@@ -1002,17 +1064,17 @@ elif page == "📈 Suivi":
                          f"{latest - initial:+.1f} kg depuis le début")
                 
                 st.progress(min(pct / 100, 1.0))
-                st.caption(f"**{pct:.1f}%** de l'objectif atteint")
+                st.caption(f"**{pct:.1f}%** de votre objectif atteint")
                 
                 remaining = abs(target - latest)
                 st.metric("Reste à atteindre", f"{remaining:.1f} kg")
             else:
-                st.info("📊 Aucun enregistrement pour le moment.\nCommencez à suivre votre progression!")
+                st.info("📊 Aucun enregistrement.\nCommencez à suivre votre progression!")
         
-        # Graphique d'évolution
+        # Graphique
         if st.session_state.weight_history:
             st.markdown("---")
-            st.markdown("### 📈 Évolution de votre Poids")
+            st.markdown("### 📈 Courbe d'Évolution")
             
             dates = [e['date'] for e in st.session_state.weight_history]
             weights = [e['weight'] for e in st.session_state.weight_history]
@@ -1023,7 +1085,7 @@ elif page == "📈 Suivi":
             fig.add_trace(go.Scatter(
                 x=dates, y=weights,
                 mode='lines+markers',
-                name='Poids',
+                name='Votre poids',
                 line=dict(color='#FF6B35', width=3),
                 marker=dict(size=10, color='#FF6B35')
             ))
@@ -1049,7 +1111,7 @@ elif page == "📈 Suivi":
             ))
             
             fig.update_layout(
-                title="Évolution du Poids dans le Temps",
+                title="Évolution de Votre Poids",
                 xaxis_title="Date",
                 yaxis_title="Poids (kg)",
                 height=500,
