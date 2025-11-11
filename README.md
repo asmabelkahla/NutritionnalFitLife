@@ -102,12 +102,6 @@ Contenues dans `requirements.txt`:
 - `modules/meal_plan_generator.py`: génération jour/semaine, formatage affichage, statistiques.
 - `modules/nutrition_assistant.py`: intents par regex, réponses guidées par templates, analyse d’aliments.
 
----
-
-### ✅ Bonnes pratiques
-- Lancer dans un venv.
-- Maintenir la cohérence des colonnes du dataset.
-- Adapter les pondérations/heuristiques si vous changez d’objectifs ou de métriques.
 
 ---
 
@@ -117,5 +111,5 @@ Cette application fournit des informations à titre indicatif et éducatif. Pour
 ---
 
 ### 📜 Licence
-Open Source. Voir entête des fichiers pour crédits: Asma Bélkahla & Monia Selleoui.
+Open Source. Voir entête des fichiers pour crédits: Asma Bélkahla .
 

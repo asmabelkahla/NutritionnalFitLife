@@ -1290,7 +1290,7 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #666; padding: 2rem;'>
     <p><strong>🥗 FitLife - Assistant Nutritionnel IA 100% Local</strong></p>
-    <p>Développé avec ❤️ par Asma Bélkahla & Monia Selleoui</p>
+    <p>Développé avec ❤️ par Asma Bélkahla </p>
     <p style='font-size: 0.9rem;'>
         🤖 Powered by: Scikit-learn, Streamlit, Pandas, NumPy, Plotly<br>
         ✅ Sans API externe | ✅ 100% Local | ✅ Open Source
