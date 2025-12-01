@@ -1,6 +1,7 @@
 """
 Module 4: Assistant Nutritionnel Conversationnel
 Système basé sur des règles et templates (sans API externe)
+Auteurs: Asma Bélkahla & Monia Selleoui
 """
 
 import re
@@ -10,6 +11,7 @@ import pandas as pd
 
 @dataclass
 class ConversationContext:
+    """Contexte de conversation pour personnalisation"""
     user_profile: Optional[Dict] = None
     nutritional_needs: Optional[Dict] = None
     recent_queries: List[str] = None
@@ -22,12 +24,18 @@ class NutritionAssistant:
     """
     Assistant conversationnel basé sur des règles et reconnaissance de patterns
     Alternative intelligente sans dépendance API externe
+    
+    Architecture:
+    1. Détection intentions: regex patterns
+    2. Extraction entités: noms d'aliments, quantités
+    3. Génération réponses: templates contextuels
+    4. Personnalisation: utilise profil utilisateur
     """
     
-    # Patterns de questions
+    # Patterns de questions (regex pour détection d'intentions)
     PATTERNS = {
         'petit_dejeuner': r'(petit[- ]d[eé]jeuner|breakfast|matin)',
-        'post_entrainement': r'(post[- ]entra[îi]nement|apr[èe]s (sport|musculation|training))',
+        'post_entrainement': r'(post[- ]entra[îi]nement|apr[èe]s (sport|musculation|training|séance))',
         'calories': r'(calorie|kcal|[ée]nergie)',
         'proteines': r'(prot[ée]ine|protein)',
         'perte_poids': r'(perd(re|[- ]de[- ]poids)|maigrir|mincir)',
@@ -41,11 +49,11 @@ class NutritionAssistant:
         'timing': r'(quand|heure|moment|timing)'
     }
     
-    # Templates de réponses
+    # Templates de réponses personnalisées
     RESPONSE_TEMPLATES = {
         'petit_dejeuner': {
             'Perte de poids': """
-🍳 **Petit-déjeuner pour perte de poids** (adapté à votre profil)
+🳳 **Petit-déjeuner pour perte de poids** (adapté à votre profil)
 
 Objectif: {calories:.0f} kcal | {proteins:.0f}g protéines
 
@@ -202,14 +210,19 @@ Si entraînement intense > 60 min:
         self.context = ConversationContext()
     
     def set_context(self, profile: Dict, needs: Dict):
-        """Configure le contexte utilisateur"""
+        """Configure le contexte utilisateur pour personnalisation"""
         self.context.user_profile = profile
         self.context.nutritional_needs = needs
     
     def _detect_intent(self, query: str) -> Tuple[str, float]:
         """
-        Détecte l'intention de l'utilisateur
-        Retourne (intent, confidence)
+        Détecte l'intention de l'utilisateur via patterns
+        
+        Args:
+            query: Question de l'utilisateur
+            
+        Returns:
+            Tuple (intent, confidence_score)
         """
         query_lower = query.lower()
         
@@ -222,7 +235,15 @@ Si entraînement intense > 60 min:
         return 'general', 0.5
     
     def _extract_food_name(self, query: str) -> Optional[str]:
-        """Extrait un nom d'aliment de la requête"""
+        """
+        Extrait un nom d'aliment de la requête
+        
+        Args:
+            query: Question de l'utilisateur
+            
+        Returns:
+            Nom de l'aliment trouvé ou None
+        """
         query_lower = query.lower()
         
         # Chercher dans la base
@@ -232,7 +253,8 @@ Si entraînement intense > 60 min:
         
         # Mots clés communs
         keywords = ['poulet', 'saumon', 'riz', 'avoine', 'œuf', 'banane', 
-                   'brocoli', 'quinoa', 'amande', 'yaourt', 'thon']
+                   'brocoli', 'quinoa', 'amande', 'yaourt', 'thon', 'tofu',
+                   'lentille', 'épinard', 'avocat', 'patate']
         
         for keyword in keywords:
             if keyword in query_lower:
@@ -246,7 +268,16 @@ Si entraînement intense > 60 min:
         return None
     
     def _rate_nutrient(self, value: float, nutrient_type: str) -> str:
-        """Évalue un nutriment"""
+        """
+        Évalue un nutriment avec emoji
+        
+        Args:
+            value: Valeur du nutriment
+            nutrient_type: Type ('protein' ou 'fiber')
+            
+        Returns:
+            Label d'évaluation
+        """
         ratings = {
             'protein': {
                 'high': (20, '💪 Excellent source'),
@@ -270,7 +301,16 @@ Si entraînement intense > 60 min:
         return ''
     
     def _analyze_food_for_goal(self, food_data: pd.Series, goal: str) -> str:
-        """Analyse un aliment selon l'objectif"""
+        """
+        Analyse un aliment selon l'objectif utilisateur
+        
+        Args:
+            food_data: Données de l'aliment
+            goal: Objectif utilisateur
+            
+        Returns:
+            Analyse textuelle personnalisée
+        """
         analyses = {
             'Perte de poids': lambda f: f"""
 {'✅ EXCELLENT' if f['Caloric Value'] < 150 else '⚠️ MODÉRÉ' if f['Caloric Value'] < 300 else '❌ LIMITER'} pour la perte de poids
@@ -296,6 +336,13 @@ Si entraînement intense > 60 min:
     def answer_query(self, query: str) -> str:
         """
         Répond à une question utilisateur
+        Point d'entrée principal
+        
+        Args:
+            query: Question de l'utilisateur
+            
+        Returns:
+            Réponse personnalisée
         """
         # Détection intention
         intent, confidence = self._detect_intent(query)

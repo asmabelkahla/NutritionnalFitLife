@@ -1,6 +1,7 @@
 """
 Package modules pour FitLife Nutrition AI
 Tous les modules IA développés localement
+Auteurs: Asma Bélkahla & Monia Selleoui
 """
 
 from .nutrition_calculator import NutritionalCalculator, UserProfile

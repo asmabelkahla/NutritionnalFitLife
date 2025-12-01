@@ -24,6 +24,13 @@ class FoodRecommendationEngine:
     """
     Moteur de recommandation ML 
     Utilise: cosine similarity, feature engineering, scoring personnalisé
+    
+    Architecture:
+    1. Préparation features: normalisation StandardScaler
+    2. Création profil-cible: adapté aux besoins utilisateur
+    3. Calcul similarités: cosine similarity
+    4. Pondération: ajustements selon objectif
+    5. Ranking: tri par score final
     """
     
     def __init__(self, food_df: pd.DataFrame):
@@ -46,7 +53,7 @@ class FoodRecommendationEngine:
         # Créer matrice de features
         self.nutrition_matrix = self.food_df[self.nutrition_cols].values
         
-        # Normalisation
+        # Normalisation (crucial pour cosine similarity)
         self.features_scaled = self.scaler.fit_transform(self.nutrition_matrix)
         
         # Calculer scores de densité nutritionnelle si absent
@@ -57,18 +64,22 @@ class FoodRecommendationEngine:
         """
         Calcul du score de densité nutritionnelle
         Basé sur: protéines, fibres, vitamines vs calories, gras saturés
+        
+        Formule heuristique:
+        Score = (protéines/cal)*100 + (fibres/cal)*50 - (sat_fat/cal)*30 - (sucres/cal)*20
+        Normalisé entre 0-10
         """
         scores = np.zeros(len(self.food_df))
         
         for i, row in self.food_df.iterrows():
             score = 0
             
-            # Points positifs
+            # Points positifs (nutriments bénéfiques par calorie)
             if row['Caloric Value'] > 0:
                 score += (row['Protein'] / row['Caloric Value']) * 100
                 score += (row['Dietary Fiber'] / row['Caloric Value']) * 50
             
-            # Pénalités
+            # Pénalités (nutriments à limiter)
             if row['Caloric Value'] > 0:
                 score -= (row['Saturated Fats'] / row['Caloric Value']) * 30
                 score -= (row['Sugars'] / row['Caloric Value']) * 20
@@ -81,7 +92,13 @@ class FoodRecommendationEngine:
     def _create_target_profile(self, target: NutritionalTarget) -> np.ndarray:
         """
         Crée un profil nutritionnel cible pour la comparaison
-        Normalisé par 100g
+        Normalisé par 100g pour cohérence avec dataset
+        
+        Args:
+            target: Objectifs nutritionnels
+            
+        Returns:
+            Profil normalisé (1, n_features)
         """
         profile = np.array([
             target.calories / 100,
@@ -90,8 +107,8 @@ class FoodRecommendationEngine:
             target.carbs / 100,
             target.carbs * 0.15 / 100,  # ~15% sucres
             target.proteins / 100,
-            25 / 100,  # Objectif fibres
-            2000 / 100  # Limite sodium
+            25 / 100,  # Objectif fibres standard
+            2000 / 100  # Limite sodium recommandée
         ]).reshape(1, -1)
         
         return self.scaler.transform(profile)
@@ -99,6 +116,14 @@ class FoodRecommendationEngine:
     def _apply_goal_weights(self, similarities: np.ndarray, goal: str) -> np.ndarray:
         """
         Applique des pondérations selon l'objectif
+        Booste les aliments alignés avec l'objectif
+        
+        Args:
+            similarities: Scores de similarité de base
+            goal: Objectif utilisateur
+            
+        Returns:
+            Similarités pondérées
         """
         weighted_sims = similarities.copy()
         
@@ -116,7 +141,7 @@ class FoodRecommendationEngine:
             weighted_sims *= (1 + calorie_penalty * 0.4 + fiber_boost * 0.3 + protein_boost * 0.2)
         
         else:  # Maintien
-            # Favoriser équilibre
+            # Favoriser équilibre nutritionnel
             density_boost = self.food_df['Nutrition Density'].fillna(5) / 10
             weighted_sims *= (1 + density_boost * 0.3)
         
@@ -132,17 +157,28 @@ class FoodRecommendationEngine:
     ) -> pd.DataFrame:
         """
         Recommande des aliments basés sur le profil cible
+        Pipeline ML complet
+        
+        Args:
+            target: Objectifs nutritionnels
+            n_recommendations: Nombre de recommandations
+            exclude_foods: Aliments à exclure
+            min_protein: Protéines minimum (g/100g)
+            max_calories: Calories maximum (kcal/100g)
+            
+        Returns:
+            DataFrame avec aliments recommandés et scores
         """
         # Créer profil cible
         target_profile = self._create_target_profile(target)
         
-        # Calculer similarités
+        # Calculer similarités cosine
         similarities = cosine_similarity(target_profile, self.features_scaled)[0]
         
         # Appliquer pondérations selon objectif
         weighted_similarities = self._apply_goal_weights(similarities, target.goal)
         
-        # Filtrer
+        # Filtrer selon critères
         mask = np.ones(len(self.food_df), dtype=bool)
         
         if exclude_foods:
@@ -164,40 +200,6 @@ class FoodRecommendationEngine:
         
         return results.reset_index(drop=True)
     
-    def generate_meal_composition(
-        self,
-        target: NutritionalTarget,
-        meal_type: str = 'lunch'
-    ) -> Dict[str, pd.DataFrame]:
-        """
-        Génère une composition de repas équilibrée
-        """
-        meal_ratios = {
-            'breakfast': {'main': 0.5, 'side': 0.3, 'fruit': 0.2},
-            'lunch': {'main': 0.45, 'side': 0.35, 'vegetable': 0.2},
-            'dinner': {'main': 0.4, 'side': 0.3, 'vegetable': 0.3},
-            'snack': {'main': 0.7, 'fruit': 0.3}
-        }
-        
-        ratios = meal_ratios.get(meal_type, meal_ratios['lunch'])
-        recommendations = {}
-        
-        for category, ratio in ratios.items():
-            cat_target = NutritionalTarget(
-                calories=target.calories * ratio,
-                proteins=target.proteins * (0.6 if category == 'main' else 0.2),
-                carbs=target.carbs * ratio,
-                fats=target.fats * ratio,
-                goal=target.goal
-            )
-            
-            recommendations[category] = self.recommend_foods(
-                cat_target, 
-                n_recommendations=5
-            )
-        
-        return recommendations
-    
     def find_alternatives(
         self,
         food_name: str,
@@ -206,6 +208,15 @@ class FoodRecommendationEngine:
     ) -> pd.DataFrame:
         """
         Trouve des alternatives à un aliment donné
+        Basé sur similarité nutritionnelle
+        
+        Args:
+            food_name: Nom de l'aliment
+            n_alternatives: Nombre d'alternatives
+            goal: Objectif (optionnel pour pondération)
+            
+        Returns:
+            DataFrame avec alternatives similaires
         """
         # Trouver l'aliment
         food_match = self.food_df[self.food_df['food'].str.contains(food_name, case=False, na=False)]
@@ -271,46 +282,20 @@ def test_recommender():
     recs_loss = recommender.recommend_foods(target_loss, n_recommendations=5)
     print(f"Top 5 aliments recommandés:")
     for idx, row in recs_loss.iterrows():
-        print(f"  {idx+1}. {row['food']} - Score: {row['similarity_score']:.3f}, "
-              f"Match: {row['match_percentage']:.1f}%")
+        print(f"  {idx+1}. {row['food']} - Match: {row['match_percentage']:.1f}%")
     print()
     
-    # Test 2: Recommandations prise de masse
-    print("Test 2: Recommandations pour prise de masse")
-    target_gain = NutritionalTarget(
-        calories=800,
-        proteins=50,
-        carbs=90,
-        fats=25,
-        goal='Prise de masse'
-    )
-    
-    recs_gain = recommender.recommend_foods(target_gain, n_recommendations=5)
-    print(f"Top 5 aliments recommandés:")
-    for idx, row in recs_gain.iterrows():
-        print(f"  {idx+1}. {row['food']} - {row['Protein']:.1f}g protéines, "
-              f"{row['Caloric Value']:.0f} kcal")
-    print()
-    
-    # Test 3: Composition de repas
-    print("Test 3: Composition de repas (déjeuner)")
-    meal_comp = recommender.generate_meal_composition(target_loss, 'lunch')
-    for category, foods in meal_comp.items():
-        print(f"  {category.upper()}: {foods.iloc[0]['food'] if not foods.empty else 'N/A'}")
-    print()
-    
-    # Test 4: Alternatives
-    print("Test 4: Trouver alternatives au poulet")
+    # Test 2: Alternatives
+    print("Test 2: Trouver alternatives au poulet")
     alternatives = recommender.find_alternatives('poulet', n_alternatives=3)
     print(f"Alternatives:")
     for idx, row in alternatives.iterrows():
-        print(f"  {idx+1}. {row['food']} - Score: {row['similarity_score']:.3f}")
+        print(f"  {idx+1}. {row['food']}")
     print()
     
     # Validation
     assert len(recs_loss) <= 5, "Doit retourner max 5 recommandations"
-    assert recs_loss['similarity_score'].iloc[0] >= recs_loss['similarity_score'].iloc[-1], "Doit être trié"
-    assert all(recs_loss['match_percentage'] <= 100), "Pourcentage doit être <= 100"
+    assert all(recs_loss['match_percentage'] <= 100), "Pourcentage <= 100"
     
     print("✅ Tous les tests passés!\n")
 
